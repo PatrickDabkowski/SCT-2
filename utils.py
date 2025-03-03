@@ -44,7 +44,7 @@ def segment_lungs(path: str):
 
     input_image, name = read_ct(path)
     
-    os.mkdir(name)
+    os.mkdir(f"temporay_data\{name}")
     sitk.WriteImage(input_image, f"temporay_data\{name}\ct.nrrd")
         
     segmentation = inferer.apply(input_image)  # default model is U-net(R231)
