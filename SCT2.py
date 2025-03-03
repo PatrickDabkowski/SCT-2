@@ -1,4 +1,5 @@
 import os
+import csv
 import torch
 import argparse
 import numpy as np
@@ -102,9 +103,8 @@ class CT2Inference():
         Returns: 
             values (torch.Tensor): aggregated CT representation
         """
-        sample_path = sample_path.split('\\')
-        lungs = sitk.GetArrayFromImage(sitk.ReadImage(sample_path[0] + "\\Lungs\\" + sample_path[-1]))
-        study = sitk.GetArrayFromImage(sitk.ReadImage(sample_path[0] + "\\Studies\\" + sample_path[-1]))
+        lungs = sitk.GetArrayFromImage(sitk.ReadImage(f"{sample_path}/lungs.nrrd"))
+        study = sitk.GetArrayFromImage(sitk.ReadImage(f"{sample_path}/ct.nrrd"))
         sample = study.copy()
         sample[lungs==0] = np.min(sample)
         
@@ -125,12 +125,11 @@ class CT2Inference():
         return values 
     
     @torch.no_grad()
-    def __call__(self, sample_path: str, lungs_path: str):
+    def __call__(self, sample_path: str):
         """
         classifies CT based on their embeddings
         Args:
             sample_path (str): path to CT's directory 
-            lungs_path (str): path to CT's segmentation
         Returns: 
             predictions (torch.Tensor[int]): binary classification of the cancer
             probabilities (torch.Tensor[float]): class probabilities
@@ -139,14 +138,18 @@ class CT2Inference():
         self.aggregation.eval()
         self.classifier.eval()
 
-
-        sample_path = sample.split('\\')
-        if os.path.exists(sample_path[0] + "\\Lungs\\" + sample_path[-1]) and os.path.exists(sample_path[0] + "\\Studies\\" + sample_path[-1]):
-            bag_space = self.process_sample(sample)
+        if os.path.exists(f"{sample_path}/ct.nrrd") and os.path.exists(f"{sample_path}/lungs.nrrd"):
+            bag_space = self.process_sample(sample_path)
         
             pred = self.classifier(bag_space)
             probabilities = torch.sigmoid(pred)
             predictions = (probabilities >= self.threshold).float() 
+        
+        csv_file = f"results/{sample_path}.csv"
+        with open(csv_file, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["file_name", "result"])  
+            writer.writerows(zip(predictions, probabilities))
         
         return predictions, probabilities
 
