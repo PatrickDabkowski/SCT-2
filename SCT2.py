@@ -6,6 +6,7 @@ import numpy as np
 import SimpleITK as sitk
 from torchvision import transforms
 from collections.abc import Sequence
+from utils import segment_lungs, read_ct
 from models import Encoder, GRUAggregation, MLP
 
 transform = transforms.Compose([transforms.ToTensor(), transforms.Resize((512, 512), antialias=True), 
@@ -167,6 +168,13 @@ if __name__ == "__main__":
     sct2 = CT2Inference(threshold=args.threshold, device=args.device, from_pretrained=args.from_pretrained)
     
     if args.lungs is None:
-        pass
+        segment_lungs(args.input)
+    
+    else:
+        ct, name = read_ct(args.input)
+        lung, name = read_ct(args.lungs)
+        
+        sitk.WriteImage(ct, f"temporay_data\{name}\ct.nrrd")
+        sitk.WriteImage(lung, f"temporay_data\{name}\lungs.nrrd")
     
     predictions, probabilitiessct2 = (args.input)
