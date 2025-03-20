@@ -24,8 +24,11 @@ def read_ct(path: str):
         image = sitk.ReadImage(path)
         if path.endswith((".mha")):
             name = path.split(".mha")[-2]
+            name = name.split("/")[-1]
         elif  path.endswith((".nrrd")):
             name = path.split(".nrrd")[-2]
+            name = name.split("/")[-1]
+            
         print(f"File {path} read")
     
     else:
@@ -44,13 +47,13 @@ def segment_lungs(path: str):
 
     input_image, name = read_ct(path)
     
-    os.mkdir(f"temporay_data\{name}")
-    sitk.WriteImage(input_image, f"temporay_data\{name}\ct.nrrd")
-        
+    os.mkdir(f"temporary_data/{name}")
+    sitk.WriteImage(input_image, f"temporary_data/{name}/ct.nrrd")
+
     segmentation = inferer.apply(input_image)  # default model is U-net(R231)
     segmentation = sitk.GetImageFromArray(segmentation)
     segmentation.CopyInformation(input_image)
 
     binary_mask = sitk.BinaryThreshold(segmentation, lowerThreshold=1, upperThreshold=2, insideValue=1, outsideValue=0)
 
-    sitk.WriteImage(binary_mask, f"temporay_data\{name}\lungs.nrrd")
+    sitk.WriteImage(binary_mask, f"temporary_data/{name}/lungs.nrrd")

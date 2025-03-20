@@ -66,14 +66,14 @@ class CT2Inference():
         self.threshold = threshold
 
         self.encoder = Encoder()
-        self.aggregation = GRUAggregation(512, 2)
+        self.aggregation = GRUAggregation(256, 2)
         self.classifier = MLP(1)
         
         if from_pretrained:
 
-            self.encoder.load_state_dict(torch.load(from_pretrained[0]))
-            self.aggregation.load_state_dict(torch.load(from_pretrained[1]))
-            self.classifier.load_state_dict(torch.load(from_pretrained[2]))
+            self.encoder.load_state_dict(torch.load(from_pretrained[0], map_location=torch.device(self.device)))
+            self.aggregation.load_state_dict(torch.load(from_pretrained[1], map_location=torch.device(self.device)))
+            self.classifier.load_state_dict(torch.load(from_pretrained[2], map_location=torch.device(self.device)))
 
         self.encoder.to(self.device)
         self.aggregation.to(self.device)
@@ -115,7 +115,7 @@ class CT2Inference():
             
             #check weather lungs are more than 6% of sample
             if check_lungs(sample[i]):
-                latent_space = self.process_slice(sample[i], i)
+                latent_space = self.process_slice(sample[i])
                 bag.append(latent_space)
             
         # aggregation of slice embeddings
@@ -145,14 +145,19 @@ class CT2Inference():
             pred = self.classifier(bag_space)
             probabilities = torch.sigmoid(pred)
             predictions = (probabilities >= self.threshold).float() 
-        
-        csv_file = f"results/{sample_path}.csv"
-        with open(csv_file, mode="w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(["file_name", "result"])  
-            writer.writerows(zip(predictions, probabilities))
-        
-        return predictions, probabilities
+
+            predictions_values = [prediction.item() for prediction in predictions] 
+            probabilities_values = [probability.item() for probability in probabilities]  
+
+            name = sample_path.split("/")[-1]
+            csv_file = f"results/{name}.csv"
+            
+            with open(csv_file, mode="w", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(["class", "probability"])
+                writer.writerows(zip(predictions_values, probabilities_values))
+                        
+            return predictions, probabilities
 
 if __name__ == "__main__":
     
@@ -161,20 +166,21 @@ if __name__ == "__main__":
     parser.add_argument("--lungs", type=str, help="path to CT's segmentation")
     parser.add_argument("--threshold", type=float, help="decision boundary for classifier", default=0.15)
     parser.add_argument("--device", type=str, help="computing node (cuda, mps, cpu)") 
-    parser.add_argument("--from_pretrained", type=Sequence[str], help="list of paths to model weights", default=["model_weights/_encoder.pt", "model_weights/_aggregation.pt", "model_weights/_ct.pt"]) 
+    parser.add_argument("--from_pretrained", type=lambda s: s.split(","), help="list of paths to model weights", default=["model_weights/_encoder.pt", "model_weights/_aggregation.pt", "model_weights/_ct.pt"]) 
     
     args = parser.parse_args()
     
     sct2 = CT2Inference(threshold=args.threshold, device=args.device, from_pretrained=args.from_pretrained)
     
-    if args.lungs is None:
+    if not args.lungs:
         segment_lungs(args.input)
     
     else:
-        ct, name = read_ct(args.input)
-        lung, name = read_ct(args.lungs)
-        
-        sitk.WriteImage(ct, f"temporay_data\{name}\ct.nrrd")
-        sitk.WriteImage(lung, f"temporay_data\{name}\lungs.nrrd")
     
-    predictions, probabilitiessct2 = sct2(args.input)
+        lung, name = read_ct(args.lungs)
+        ct, name = read_ct(args.input)
+        
+        sitk.WriteImage(ct, f"temporary_data/{name}/ct.nrrd")
+        sitk.WriteImage(lung, f"temporary_data/{name}/lungs.nrrd")
+    
+    predictions, probabilitiessct2 = sct2(f"temporary_data/{name}")
