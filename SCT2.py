@@ -161,7 +161,7 @@ if __name__ == "__main__":
     parser.add_argument("--lungs", type=str, help="path to CT's segmentation")
     parser.add_argument("--threshold", type=float, help="decision boundary for classifier", default=0.15)
     parser.add_argument("--device", type=str, help="computing node (cuda, mps, cpu)") 
-    parser.add_argument("--from_pretrained", type=Sequence([str]), help="list of paths to model weights", default=["model_weights/_encoder.pt", "model_weights/_aggregation.pt", "model_weights/_ct.pt"]) 
+    parser.add_argument("--from_pretrained", type=Sequence[str], help="list of paths to model weights", default=["model_weights/_encoder.pt", "model_weights/_aggregation.pt", "model_weights/_ct.pt"]) 
     
     args = parser.parse_args()
     
@@ -177,4 +177,4 @@ if __name__ == "__main__":
         sitk.WriteImage(ct, f"temporay_data\{name}\ct.nrrd")
         sitk.WriteImage(lung, f"temporay_data\{name}\lungs.nrrd")
     
-    predictions, probabilitiessct2 = (args.input)
+    predictions, probabilitiessct2 = sct2(args.input)
