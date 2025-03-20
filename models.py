@@ -72,11 +72,11 @@ class ResBlock(torch.nn.Module):
             
         x = self.conv2(x)
         
-        x = x + residual
-        x = self.norm2(x)
-        
         if self.activation:
             x = torch.nn.functional.leaky_relu(x)
+        
+        x = x + residual
+        x = self.norm2(x)
         
         return x
  
