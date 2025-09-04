@@ -100,23 +100,21 @@ class Encoder(torch.nn.Module):
         self.res7 = ResBlock(128, 128, 2)
         self.res8 = ResBlock(128, 64, 2, False)
 
-        self.dropout = torch.nn.Dropout2D(p=0.5)
+        self.dropout = torch.nn.Dropout2D(p=0.2)
         
     def forward(self, x):
         
         x = self.incept1(x)
         
         x = self.res1(x) 
-        x = self.res2(x) + self.downsample(x)
+        x = self.res2(x)
+        x = self.res4(x)
         x = self.dropout(x)
-        x = self.res4(x) + self.downsample(x)
+        x = self.res5(x)
         x = self.dropout(x)
-        x = self.res5(x) + self.downsample(x)
+        x = self.res6(x)
         x = self.dropout(x)
-        x = self.res6(x) + self.downsample(x)
-        x = self.dropout(x)
-        x = self.res7(x) + self.downsample(x)
-        x = self.dropout(x)
+        x = self.res7(x)
         x = self.res8(x)
         
         x = torch.flatten(x)
